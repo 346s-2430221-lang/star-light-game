@@ -225,24 +225,68 @@ function drawWardrobeOnHero(x,y,custom=false,outfit=equippedClothes){
 let heroWalkPhase=0,heroWalkBlend=0;
 function drawHero(x,y){const bob=Math.sin(heroWalkPhase*2)*1.15*heroWalkBlend,lean=Math.sin(heroWalkPhase)*0.018*heroWalkBlend;ctx.save();ctx.translate(x,y);ctx.rotate(lean);ctx.translate(-x,-y+bob);drawHeroStatic(x,y);ctx.restore()}
 function drawHeroAura(x,y){
- // 장착한 갑옷 등급에 맞춰 색이 바뀌는 별빛 오라
- const auraColors=['#9deaff','#c99a62','#dce8f5','#77ddff','#ff713d','#79eaff','#b28aff','#ffcb75','#ffffff','#ff713d','#74dfff','#b65cff','#baff8a','#e7c8ff'];
- const color=auraColors[Math.max(0,Math.min(13,gear.armor||0))]||'#9deaff';
- const t=Date.now()/1000, pulse=.5+Math.sin(t*3.2)*.12;
+ // 갑옷 등급에 따라 색과 위력이 달라지는 고급 별빛 오라
+ const tier=Math.max(0,Math.min(13,gear.armor||0));
+ const palette=[
+  ['#9deaff','#eaffff'],['#c99a62','#ffe3ae'],['#dce8f5','#ffffff'],
+  ['#77ddff','#e6fbff'],['#ff713d','#ffe0a0'],['#79eaff','#ffffff'],
+  ['#b28aff','#f1d9ff'],['#ffcb75','#fff2c2'],['#ffffff','#d9f5ff'],
+  ['#ff713d','#fff0a0'],['#74dfff','#efffff'],['#b65cff','#f3d5ff'],
+  ['#baff8a','#f3ffd6'],['#e7c8ff','#ffffff']
+ ];
+ const [color,core]=palette[tier],t=Date.now()/1000;
+ const power=1+tier*.055,pulse=.78+Math.sin(t*3.4)*.18;
  ctx.save();
  ctx.globalCompositeOperation='lighter';
- ctx.globalAlpha=.22+(Math.min(13,gear.armor||0)*.012);
- ctx.shadowColor=color;ctx.shadowBlur=10+(gear.armor||0)*.7;
- ctx.strokeStyle=color;ctx.lineWidth=1.8;
- ctx.beginPath();ctx.ellipse(x,y+7,17+Math.sin(t*2)*1.8,7+Math.cos(t*2)*.8,t*.35,0,Math.PI*2);ctx.stroke();
- ctx.globalAlpha=pulse*.18;ctx.lineWidth=1;
- ctx.beginPath();ctx.ellipse(x,y-5,14+Math.sin(t*2.4)*2,24+Math.cos(t*2.4)*2,-t*.22,0,Math.PI*2);ctx.stroke();
- for(let i=0;i<4;i++){
-  const a=t*(.8+i*.08)+i*Math.PI/2, r=17+(i%2)*3;
-  const px=x+Math.cos(a)*r,py=y-5+Math.sin(a)*r*.78;
-  ctx.globalAlpha=.45+Math.sin(t*4+i)*.2;
-  ctx.fillStyle=color;ctx.fillRect(Math.round(px)-1,Math.round(py)-1,3,3);
-  if(i%2===0){ctx.globalAlpha=.65;ctx.fillRect(Math.round(px),Math.round(py)-3,1,7);ctx.fillRect(Math.round(px)-3,Math.round(py),7,1)}
+ // 발밑 마법진: 여러 겹의 회전하는 원과 룬 표시
+ ctx.shadowColor=color;ctx.shadowBlur=12+power*2;
+ ctx.strokeStyle=color;ctx.lineWidth=1.4;
+ ctx.globalAlpha=.34*pulse;
+ ctx.beginPath();ctx.ellipse(x,y+8,22+Math.sin(t*2)*2,8+Math.cos(t*2)*1.1,t*.28,0,Math.PI*2);ctx.stroke();
+ ctx.globalAlpha=.2*pulse;ctx.lineWidth=1;
+ ctx.beginPath();ctx.ellipse(x,y+8,29+Math.cos(t*1.7)*1.5,11,t*-.18,0,Math.PI*2);ctx.stroke();
+ // 마법진의 빛나는 룬 조각
+ for(let i=0;i<8;i++){
+  const a=t*(i%2?.32:-.24)+i*Math.PI/4;
+  const px=x+Math.cos(a)*25,py=y+8+Math.sin(a)*8;
+  ctx.save();ctx.translate(px,py);ctx.rotate(a+t*.3);
+  ctx.globalAlpha=.45*pulse;ctx.fillStyle=core;
+  ctx.fillRect(-2,-2,4,4);ctx.fillRect(-1,-5,2,10);
+  ctx.restore();
+ }
+ // 몸을 감싸는 이중 에너지 고리
+ ctx.shadowBlur=16+power*3;ctx.lineWidth=1.7;
+ ctx.globalAlpha=.24*pulse;
+ ctx.beginPath();ctx.ellipse(x,y-5,17+Math.sin(t*2.1)*2,25+Math.cos(t*2.1)*2,-t*.3,0,Math.PI*2);ctx.stroke();
+ ctx.globalAlpha=.17*pulse;ctx.lineWidth=1;
+ ctx.beginPath();ctx.ellipse(x,y-5,21+Math.cos(t*1.8)*2,29+Math.sin(t*1.8)*2,t*.22,0,Math.PI*2);ctx.stroke();
+ // 캐릭터 주위를 공전하는 별빛 파편
+ for(let i=0;i<6;i++){
+  const a=t*(.75+(i%3)*.12)+i*Math.PI/3;
+  const rx=19+(i%2)*5,ry=25+(i%3)*2;
+  const px=x+Math.cos(a)*rx,py=y-5+Math.sin(a)*ry;
+  const size=i%3===0?3:2;
+  ctx.globalAlpha=(.48+Math.sin(t*4+i)*.2)*pulse;
+  ctx.fillStyle=i%2?color:core;
+  ctx.fillRect(Math.round(px)-size/2,Math.round(py)-size/2,size,size);
+  if(i%2===0){
+   ctx.globalAlpha=.55*pulse;ctx.fillRect(Math.round(px),Math.round(py)-5,1,10);
+   ctx.fillRect(Math.round(px)-5,Math.round(py),10,1);
+  }
+ }
+ // 상위 갑옷일수록 강해지는 머리 위 별빛과 수직 광휘
+ if(tier>=4){
+  ctx.globalAlpha=(.12+tier*.012)*pulse;
+  ctx.fillStyle=color;
+  ctx.fillRect(Math.round(x)-1,Math.round(y)-35,2,9);
+  ctx.globalAlpha=.55*pulse;
+  ctx.fillStyle=core;
+  ctx.beginPath();ctx.moveTo(x,y-34);ctx.lineTo(x+4,y-29);ctx.lineTo(x,y-24);ctx.lineTo(x-4,y-29);ctx.closePath();ctx.fill();
+  if(tier>=9){
+   ctx.globalAlpha=.2*pulse;ctx.lineWidth=1.2;
+   ctx.beginPath();ctx.arc(x,y-5,34+Math.sin(t*2)*2,t*-.5,t*-.5+Math.PI*1.35);ctx.stroke();
+   ctx.beginPath();ctx.arc(x,y-5,34+Math.sin(t*2)*2,t*-.5+Math.PI,t*-.5+Math.PI*2.1);ctx.stroke();
+  }
  }
  ctx.restore();
 }
