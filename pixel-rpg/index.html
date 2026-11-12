@@ -224,7 +224,30 @@ function drawWardrobeOnHero(x,y,custom=false,outfit=equippedClothes){
 }
 let heroWalkPhase=0,heroWalkBlend=0;
 function drawHero(x,y){const bob=Math.sin(heroWalkPhase*2)*1.15*heroWalkBlend,lean=Math.sin(heroWalkPhase)*0.018*heroWalkBlend;ctx.save();ctx.translate(x,y);ctx.rotate(lean);ctx.translate(-x,-y+bob);drawHeroStatic(x,y);ctx.restore()}
+function drawHeroAura(x,y){
+ // 장착한 갑옷 등급에 맞춰 색이 바뀌는 별빛 오라
+ const auraColors=['#9deaff','#c99a62','#dce8f5','#77ddff','#ff713d','#79eaff','#b28aff','#ffcb75','#ffffff','#ff713d','#74dfff','#b65cff','#baff8a','#e7c8ff'];
+ const color=auraColors[Math.max(0,Math.min(13,gear.armor||0))]||'#9deaff';
+ const t=Date.now()/1000, pulse=.5+Math.sin(t*3.2)*.12;
+ ctx.save();
+ ctx.globalCompositeOperation='lighter';
+ ctx.globalAlpha=.22+(Math.min(13,gear.armor||0)*.012);
+ ctx.shadowColor=color;ctx.shadowBlur=10+(gear.armor||0)*.7;
+ ctx.strokeStyle=color;ctx.lineWidth=1.8;
+ ctx.beginPath();ctx.ellipse(x,y+7,17+Math.sin(t*2)*1.8,7+Math.cos(t*2)*.8,t*.35,0,Math.PI*2);ctx.stroke();
+ ctx.globalAlpha=pulse*.18;ctx.lineWidth=1;
+ ctx.beginPath();ctx.ellipse(x,y-5,14+Math.sin(t*2.4)*2,24+Math.cos(t*2.4)*2,-t*.22,0,Math.PI*2);ctx.stroke();
+ for(let i=0;i<4;i++){
+  const a=t*(.8+i*.08)+i*Math.PI/2, r=17+(i%2)*3;
+  const px=x+Math.cos(a)*r,py=y-5+Math.sin(a)*r*.78;
+  ctx.globalAlpha=.45+Math.sin(t*4+i)*.2;
+  ctx.fillStyle=color;ctx.fillRect(Math.round(px)-1,Math.round(py)-1,3,3);
+  if(i%2===0){ctx.globalAlpha=.65;ctx.fillRect(Math.round(px),Math.round(py)-3,1,7);ctx.fillRect(Math.round(px)-3,Math.round(py),7,1)}
+ }
+ ctx.restore();
+}
 function drawHeroStatic(x,y){
+ drawHeroAura(x,y);
  // 기본 모험가 실루엣
  rect(x-12,y+14,24,7,'#111b29aa');
  rect(x-8,y+7,6,9,'#26394b');rect(x+2,y+7,6,9,'#26394b');
