@@ -79,7 +79,7 @@ let player,monsters,chests,particles,region='forest',gold=10,potions=2,starCore=
 let heroClass='warrior',classChosen=false,classChangeTickets=0,secondJob='',skillReadyAt=0;const SKILL_COOLDOWN=8000;const CLASS_INFO={warrior:'전사: 모든 공격의 피해 +1',ranger:'궁수: 근접 전방 공격 사거리 1.5배',mage:'마법사: 모든 공격의 피해 +2',guardian:'수호자: 최대 HP +4'};const SECOND_JOBS={warrior:[{id:'knight',name:'성기사',desc:'공격력 +1, 최대 HP +2',atk:1,hp:2},{id:'berserker',name:'광전사',desc:'공격력 +2',atk:2,hp:0}],ranger:[{id:'sniper',name:'저격수',desc:'공격 사거리 추가 증가',atk:1,hp:0},{id:'hunter',name:'사냥꾼',desc:'공격력 +1, 최대 HP +1',atk:1,hp:1}],mage:[{id:'archmage',name:'대마법사',desc:'공격력 +2',atk:2,hp:0},{id:'healer',name:'성직자',desc:'최대 HP +3',atk:0,hp:3}],guardian:[{id:'paladin',name:'팔라딘',desc:'공격력 +1, 최대 HP +3',atk:1,hp:3},{id:'sentinel',name:'수호대장',desc:'최대 HP +5',atk:0,hp:5}]};
 let lifeMode='play',lifeTool='seed',seeds=5,lifeDay=1,lifeClock=0,plots={},builds=[],landParcels={},mineNodes=[],mineLoot={stone:0,copper:0,iron:0,crystal:0},portalBusy=false;let blockStock={floor:0,wall:0,door:0,flower:0,fence:0,bench:0,lampPost:0,pond:0};const plotKeys=[];for(let yy=4;yy<=8;yy+=2)for(let xx=5;xx<=11;xx+=2)plotKeys.push(xx+','+yy);
 const wardrobeCatalog=[{id:'shirt_blue',slot:'top',name:'푸른 모험가 상의',icon:'👕',price:0,color:'#315da8',desc:'처음부터 입을 수 있는 기본 옷'},{id:'shirt_rose',slot:'top',name:'벚꽃 후드',icon:'🧥',price:18,color:'#e88bb7',desc:'분홍빛 포근한 후드'},{id:'shirt_mage',slot:'top',name:'별빛 마법 로브',icon:'🔮',price:35,color:'#805ad5',desc:'보라색 별빛 로브'},{id:'shirt_gold',slot:'top',name:'황금 기사 갑옷',icon:'🛡️',price:50,color:'#d9a72e',desc:'반짝이는 황금 갑옷'},{id:'shirt_mint',slot:'top',name:'민트 탐험가 재킷',icon:'🧥',price:22,color:'#4bc9a7',desc:'산뜻한 민트색 재킷'},{id:'shirt_night',slot:'top',name:'밤하늘 망토',icon:'🌌',price:42,color:'#26356f',desc:'밤하늘처럼 짙은 파랑'},{id:'shirt_flame',slot:'top',name:'불꽃 후드',icon:'🔥',price:38,color:'#e65b32',desc:'주황빛 불꽃 디자인'},{id:'pants_blue',slot:'pants',name:'푸른 기본 바지',icon:'👖',price:0,color:'#26394b',desc:'편안한 기본 바지'},{id:'pants_rose',slot:'pants',name:'분홍 바지',icon:'👖',price:14,color:'#cf77a1',desc:'상의와 맞추기 좋은 바지'},{id:'pants_armor',slot:'pants',name:'기사 바지',icon:'🦿',price:28,color:'#65758d',desc:'단단해 보이는 금속 바지'},{id:'pants_jet',slot:'pants',name:'제트 블랙 바지',icon:'👖',price:20,color:'#202633',desc:'어떤 상의와도 잘 어울려'},{id:'pants_mint',slot:'pants',name:'초원 탐험 바지',icon:'🥾',price:24,color:'#477a54',desc:'숲 탐험에 어울리는 바지'},{id:'pants_gold',slot:'pants',name:'황금 무늬 바지',icon:'✨',price:40,color:'#c6a23a',desc:'금빛 장식이 있는 바지'},{id:'hat_none',slot:'hat',name:'모자 없음',icon:'🙂',price:0,color:'#51362f',desc:'머리 장식을 쓰지 않아'},{id:'hat_crown',slot:'hat',name:'작은 왕관',icon:'👑',price:30,color:'#ffd34d',desc:'마을의 작은 왕관'},{id:'hat_wizard',slot:'hat',name:'마법사 모자',icon:'🧙',price:24,color:'#6745a8',desc:'신비한 마법 모자'},{id:'hat_beanie',slot:'hat',name:'민트 비니',icon:'🧢',price:18,color:'#48c5a4',desc:'따뜻하고 귀여운 비니'},{id:'hat_cat',slot:'hat',name:'고양이 귀 모자',icon:'🐱',price:28,color:'#e6a3c8',desc:'분홍색 고양이 귀 장식'},{id:'hat_dragon',slot:'hat',name:'용기사 투구',icon:'🐉',price:55,color:'#b94c3e',desc:'용의 비늘을 닮은 투구'},{id:'shoes_basic',slot:'shoes',name:'기본 신발',icon:'👟',price:0,color:'#26394b',desc:'튼튼한 기본 신발'},{id:'shoes_red',slot:'shoes',name:'빨간 운동화',icon:'👟',price:16,color:'#d94f57',desc:'눈에 띄는 빨간 운동화'},{id:'shoes_gold',slot:'shoes',name:'황금 장화',icon:'🥾',price:32,color:'#d9a72e',desc:'반짝이는 황금 장화'},{id:'shoes_mint',slot:'shoes',name:'민트 러닝화',icon:'👟',price:20,color:'#42bfa1',desc:'가볍고 산뜻한 운동화'},{id:'shoes_boots',slot:'shoes',name:'탐험가 부츠',icon:'🥾',price:26,color:'#98633f',desc:'거친 사냥터를 위한 부츠'},{id:'shoes_star',slot:'shoes',name:'별빛 운동화',icon:'✨',price:45,color:'#b7baff',desc:'별빛이 반짝이는 신발'},{id:'shirt_aurora',slot:'top',name:'오로라 망토',icon:'🌈',price:0,color:'#55e8d5',rarity:'rare',desc:'희귀 · 오로라 빛이 흐르는 망토'},{id:'shirt_phoenix',slot:'top',name:'불사조의 불꽃 갑옷',icon:'🔥',price:0,color:'#ff6b38',rarity:'legendary',desc:'전설 · 황금 불꽃이 타오르는 갑옷'},{id:'pants_crystal',slot:'pants',name:'수정 수호 바지',icon:'💎',price:0,color:'#68d8ff',rarity:'rare',desc:'희귀 · 푸른 수정 장식'},{id:'pants_cosmic',slot:'pants',name:'우주의 별무늬 바지',icon:'🌌',price:0,color:'#a98cff',rarity:'legendary',desc:'전설 · 별빛이 반짝이는 바지'},{id:'hat_moon',slot:'hat',name:'달빛 여우 후드',icon:'🦊',price:0,color:'#8edcff',rarity:'rare',desc:'희귀 · 여우 귀와 달빛 장식'},{id:'hat_celestial',slot:'hat',name:'천공의 왕관',icon:'👑',price:0,color:'#ffe17a',rarity:'legendary',desc:'전설 · 빛나는 보석 왕관'},{id:'shoes_crystal',slot:'shoes',name:'수정 발걸음',icon:'💠',price:0,color:'#69e7ff',rarity:'rare',desc:'희귀 · 푸른 수정이 박힌 신발'},{id:'shoes_comet',slot:'shoes',name:'혜성의 날개 신발',icon:'☄️',price:0,color:'#ffbd5c',rarity:'legendary',desc:'전설 · 불꽃 꼬리를 남기는 신발'}];let wardrobeSlot='top',ownedClothes=['shirt_blue','pants_blue','hat_none','shoes_basic'],equippedClothes={top:'shirt_blue',pants:'pants_blue',hat:'hat_none',shoes:'shoes_basic'};const wardrobeKey='starlightWardrobe1';
-const gear={weapon:0,armor:0};const weapons=[{name:'낡은 검',price:0,atk:1},{name:'철검',price:18,atk:2},{name:'별빛 검',price:45,atk:4},{name:'용기사 검',price:90,atk:7}];const armors=[{name:'천옷',price:0,def:0},{name:'가죽 갑옷',price:20,def:1},{name:'철 갑옷',price:50,def:2},{name:'별빛 갑옷',price:100,def:4}];
+const gear={weapon:0,armor:0};const weapons=[{name:'낡은 검',price:0,atk:1},{name:'철검',price:18,atk:2},{name:'별빛 검',price:45,atk:4},{name:'용기사 검',price:90,atk:7}];const armors=[{name:'천옷',price:0,def:0},{name:'가죽 갑옷',price:20,def:1},{name:'철 갑옷',price:50,def:2},{name:'별빛 갑옷',price:100,def:4},{name:'화염 기사 갑옷',price:160,def:5},{name:'서리 수호자 갑옷',price:220,def:6},{name:'그림자 암살자 갑옷',price:300,def:7},{name:'용기사 중갑',price:420,def:8},{name:'천공의 성갑',price:600,def:10}];
 const WORLD_COLS=128,WORLD_ROWS=128,WORLD_W=WORLD_COLS*T,WORLD_H=WORLD_ROWS*T; // 4096×4096 월드
 const PROFILE_KEY='starlightRpgProfile1',DEFAULT_PIXELS=(()=>{const a=Array(768).fill('');const put=(x,y,col)=>{for(let dy=0;dy<2;dy++)for(let dx=0;dx<2;dx++)a[(y*2+dy)*24+x*2+dx]=col};for(let y=1;y<5;y++)for(let x=3;x<9;x++)put(x,y,'#51362f');for(let y=4;y<8;y++)for(let x=3;x<9;x++)put(x,y,'#e8b982');for(let y=3;y<5;y++)for(let x=2;x<10;x++)put(x,y,'#51362f');for(let x=4;x<6;x++)put(x,6,'#172b3b');for(let x=7;x<9;x++)put(x,6,'#172b3b');for(let y=8;y<13;y++)for(let x=2;x<10;x++)put(x,y,'#315da8');for(let y=13;y<16;y++)for(let x=3;x<6;x++)put(x,y,'#26394b');for(let y=13;y<16;y++)for(let x=7;x<10;x++)put(x,y,'#26394b');return a})();let avatarPixels=DEFAULT_PIXELS.slice(),profileReady=false;
 const edgeWalls=[[0,0,WORLD_COLS,1],[0,WORLD_ROWS-1,WORLD_COLS,1],[0,1,1,WORLD_ROWS-2],[WORLD_COLS-1,1,1,WORLD_ROWS-2]];
@@ -258,6 +258,32 @@ function drawHeroStatic(x,y){
   rect(x-9,y+5,18,3,'#4d3f9c');rect(x-2,y-3,4,4,'#fff0a0');
   rect(x-9,y-23,18,6,'#5369bd');rect(x-6,y-26,12,4,'#a9eaff');
   rect(x-2,y-24,4,3,'#fff5ad');ctx.restore();
+ }
+ // 상위 등급 갑옷은 별빛 갑옷 위에 전용 색상과 장식을 덧그려 구분
+ if(gear.armor>=4){
+  const armorStyle={
+   4:{main:'#a9432e',light:'#ff9b45',dark:'#572a35',glow:'#ff713d'},
+   5:{main:'#397f9d',light:'#b8f3ff',dark:'#24445f',glow:'#79eaff'},
+   6:{main:'#343044',light:'#8d79b5',dark:'#171b2b',glow:'#b28aff'},
+   7:{main:'#8b4b32',light:'#e9b56b',dark:'#493047',glow:'#ffcb75'},
+   8:{main:'#d8e6ef',light:'#fff5c7',dark:'#7489b2',glow:'#ffffff'}
+  }[gear.armor];
+  if(armorStyle){
+   ctx.save();ctx.shadowColor=armorStyle.glow;ctx.shadowBlur=gear.armor===8?15:7;
+   rect(x-10,y-9,20,17,armorStyle.dark);rect(x-8,y-8,16,14,armorStyle.main);
+   rect(x-5,y-7,10,12,armorStyle.light);rect(x-2,y-6,4,9,armorStyle.main);
+   rect(x-13,y-8,6,7,armorStyle.main);rect(x+7,y-8,6,7,armorStyle.main);
+   rect(x-11,y-7,3,4,armorStyle.light);rect(x+8,y-7,3,4,armorStyle.light);
+   rect(x-8,y+5,16,3,armorStyle.dark);rect(x-2,y-3,4,4,armorStyle.glow);
+   rect(x-9,y-24,18,5,armorStyle.dark);rect(x-7,y-26,14,4,armorStyle.main);
+   rect(x-4,y-25,8,2,armorStyle.light);
+   if(gear.armor===4){rect(x-2,y-18,4,8,'#ffb347');rect(x-1,y-17,2,6,'#fff0a0')}
+   if(gear.armor===5){rect(x-12,y-3,3,7,'#b8f3ff');rect(x+9,y-3,3,7,'#b8f3ff')}
+   if(gear.armor===6){rect(x-8,y-23,3,4,'#171b2b');rect(x+5,y-23,3,4,'#171b2b')}
+   if(gear.armor===7){rect(x-14,y-10,4,5,'#e9b56b');rect(x+10,y-10,4,5,'#e9b56b')}
+   if(gear.armor===8){rect(x-15,y-9,4,9,'#fff5c7');rect(x+11,y-9,4,9,'#fff5c7');rect(x-2,y-28,4,3,'#ffffff')}
+   ctx.restore();
+  }
  }
  // 무기 장착 외형
  if(gear.weapon>0){
