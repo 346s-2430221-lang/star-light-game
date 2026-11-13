@@ -3,7 +3,7 @@ const http = require('http');
 const PORT = Number(process.env.PORT || 10000);
 const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\/$/, '');
 const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
-const TABLE = 'device_saves';
+const TABLE = 'device_server_saves';
 const MAX_BODY = 512 * 1024;
 const cors = {
   'access-control-allow-origin': '*',
@@ -21,6 +21,7 @@ function readBody(req) {
   });
 }
 function validDeviceId(value) { return /^[a-f0-9-]{36}$/i.test(String(value || '')); }
+function validServerId(value) { return /^[a-zA-Z0-9_-]{1,40}$/.test(String(value || '')); }
 async function db(path, options = {}) {
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) throw new Error('DATABASE_NOT_CONFIGURED');
   const response = await fetch(SUPABASE_URL + '/rest/v1/' + path, {
@@ -47,10 +48,11 @@ const server = http.createServer(async (req, res) => {
     if (req.method === 'POST') {
       const body = await readBody(req);
       const deviceId = String(body.deviceId || '');
+      const serverId = String(body.serverId || 'solo');
       const save = body.save;
-      if (!validDeviceId(deviceId) || !save || typeof save !== 'object' || !save.player) return reply(res, 400, { ok: false, error: 'INVALID_SAVE' });
-      const record = { device_id: deviceId, payload: save, updated_at: new Date().toISOString() };
-      await db(TABLE + '?on_conflict=device_id', {
+      if (!validDeviceId(deviceId) || !validServerId(serverId) || !save || typeof save !== 'object' || !save.player) return reply(res, 400, { ok: false, error: 'INVALID_SAVE' });
+      const record = { device_id: deviceId, server_id: serverId, payload: save, updated_at: new Date().toISOString() };
+      await db(TABLE + '?on_conflict=device_id,server_id', {
         method: 'POST',
         headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
         body: JSON.stringify(record)
@@ -59,8 +61,9 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET') {
       const deviceId = String(url.searchParams.get('deviceId') || '');
-      if (!validDeviceId(deviceId)) return reply(res, 400, { ok: false, error: 'INVALID_DEVICE_ID' });
-      const rows = await db(TABLE + '?select=payload,updated_at&device_id=eq.' + encodeURIComponent(deviceId) + '&limit=1');
+      const serverId = String(url.searchParams.get('serverId') || 'solo');
+      if (!validDeviceId(deviceId) || !validServerId(serverId)) return reply(res, 400, { ok: false, error: 'INVALID_DEVICE_OR_SERVER_ID' });
+      const rows = await db(TABLE + '?select=payload,updated_at&device_id=eq.' + encodeURIComponent(deviceId) + '&server_id=eq.' + encodeURIComponent(serverId) + '&limit=1');
       const row = Array.isArray(rows) ? rows[0] : null;
       return reply(res, 200, { ok: true, save: row ? row.payload : null, updatedAt: row ? row.updated_at : null });
     }
