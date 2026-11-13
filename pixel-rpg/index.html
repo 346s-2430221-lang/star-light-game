@@ -141,6 +141,12 @@ select,input,textarea{border-radius:9px!important;border-color:#708ab9!important
       if(detail)detail.textContent='이 브라우저에서 스크립트 실행이 차단됐거나 페이지가 오래된 상태일 수 있어.';
     }
   },2500);
+  window.setInterval(function(){
+    if(finished||!document.getElementById('gameBootFallback'))return;
+    if(!window.__STARLIGHT_GAME_SCRIPT_ENTERED)return;
+    var phase=String(window.__STARLIGHT_GAME_PHASE||'게임 코드 시작 위치').slice(0,100);
+    if(detail)detail.textContent='현재 확인 단계: '+phase+' · 화면을 캡처해서 보내줘.';
+  },500);
 })();
 </script>
 <script>
