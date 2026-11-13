@@ -24,3 +24,15 @@ create table if not exists public.player_suggestions (
 );
 create index if not exists player_suggestions_owner_id_idx on public.player_suggestions(owner_id);
 alter table public.player_suggestions enable row level security;
+
+
+-- One independent save per device and multiplayer room (or the solo slot).
+create table if not exists public.device_server_saves (
+  device_id uuid not null,
+  server_id text not null check (server_id ~ '^[A-Za-z0-9_-]{1,40}$'),
+  payload jsonb not null,
+  updated_at timestamptz not null default now(),
+  primary key (device_id, server_id)
+);
+alter table public.device_server_saves enable row level security;
+-- The save service accesses this table with the server-side service-role key only.
