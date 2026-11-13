@@ -33,10 +33,12 @@ function join(ws,room,name,msg) {
   broadcast(room,{t:'rpg-server-list',servers:publicList()});
 }
 wss.on('connection',ws=>{
+  console.log('[ws] client connected');
   ws.isAdmin=false;
   ws.on('message',raw=>{
-    let m; try { m=JSON.parse(raw.toString()); } catch { return; }
+    let m; try { m=JSON.parse(raw.toString()); } catch { console.warn('[ws] invalid JSON message'); return; }
     if(!m || typeof m.t!=='string') return;
+    if(m.t==='rpg-create'||m.t==='rpg-public'||m.t==='rpg-join') console.log('[ws] room request:',m.t,'name:',String(m.name||'').slice(0,12),'code:',String(m.code||''));
     if(m.t==='rpg-admin-auth') {
       ws.isAdmin=!!ADMIN_TOKEN && safeEqual(m.token||'',ADMIN_TOKEN);
       send(ws,ws.isAdmin?{t:'rpg-admin-auth-ok'}:{t:'rpg-admin-auth-failed',msg:ADMIN_TOKEN?'관리자 비밀키가 올바르지 않아.':'서버에 ADMIN_TOKEN 환경 변수가 설정되지 않았어.'});
@@ -101,6 +103,6 @@ wss.on('connection',ws=>{
     }
   });
   ws.on('close',()=>leave(ws));
-  ws.on('error',()=>leave(ws));
+  ws.on('error',err=>{ console.error('[ws] client error:',err&&err.message||err); leave(ws); });
 });
 server.listen(PORT,'0.0.0.0',()=>console.log('Starlight RPG server listening on '+PORT));
