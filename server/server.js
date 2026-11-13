@@ -6,7 +6,7 @@ const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '');
 const rooms = new Map();
 const server = http.createServer((req,res) => {
   res.writeHead(200, {'content-type':'application/json; charset=utf-8','access-control-allow-origin':'*'});
-  res.end(JSON.stringify({ok:true,service:'starlight-rpg-server',rooms:rooms.size,uptime:Math.floor(process.uptime()),adminConfigured:!!ADMIN_TOKEN}));
+  res.end(JSON.stringify({ok:true,service:'starlight-rpg-server',rooms:rooms.size,uptime:Math.floor(process.uptime()),adminConfigured:!!ADMIN_TOKEN,websocket:true,build:process.env.RENDER_GIT_COMMIT||'unknown'}));
 });
 const wss = new WebSocketServer({server});
 const code = () => { let n; do { n=String(Math.floor(100000+Math.random()*900000)); } while([...rooms.values()].some(r=>r.code===n)); return n; };
@@ -14,7 +14,7 @@ const send = (ws,msg) => { if(ws.readyState===WebSocket.OPEN) ws.send(JSON.strin
 const broadcast = (room,msg,except=null) => { for(const p of room.players.values()) if(p.ws!==except) send(p.ws,msg); };
 const publicList = () => [...rooms.values()].filter(r=>r.public && r.players.size>0).map(r=>({name:r.name,players:r.players.size,max:r.max,code:r.code}));
 const safeEqual = (a,b) => { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && crypto.timingSafeEqual(x,y); };
-const ITEM_KEYS = new Set(['gold','potions','reviveStones','seeds','starCore','classChangeTickets','stone','copper','iron','crystal','floor','wall','door','flower','fence','bench','lampPost','pond']);
+const ITEM_KEYS = new Set(['gold','xp','potions','reviveStones','seeds','starCore','classChangeTickets','stone','copper','iron','crystal','floor','wall','door','flower','fence','bench','lampPost','pond']);
 function leave(ws) {
   const room=ws.room; if(!room)return;
   const p=room.players.get(ws.playerId); room.players.delete(ws.playerId);
@@ -63,6 +63,14 @@ wss.on('connection',ws=>{
       if(!text) return send(ws,{t:'rpg-admin-result',msg:'공지 내용을 입력해 줘.'});
       for(const r of rooms.values()) broadcast(r,{t:'rpg-admin-notice',text});
       send(ws,{t:'rpg-admin-result',msg:'전체 서버에 공지를 보냈어.'});
+      return;
+    }
+    if(m.t==='rpg-admin-grant-solo') {
+      if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
+      const item=String(m.item||''),amount=Math.floor(Number(m.amount));
+      if(!ITEM_KEYS.has(item)||!Number.isFinite(amount)||amount<1||amount>100000) return send(ws,{t:'rpg-admin-result',msg:'아이템 또는 수량이 올바르지 않아.'});
+      send(ws,{t:'rpg-admin-item',item,amount});
+      send(ws,{t:'rpg-admin-result',msg:'솔로 캐릭터에게 '+item+' × '+amount+' 지급 완료!'});
       return;
     }
     if(!room||!player) return;
