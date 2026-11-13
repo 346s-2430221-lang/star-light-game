@@ -751,12 +751,12 @@ function processMonsterDefeat(m,index){
  const reward=m.type==='star_king'?1000:m.type==='boss'?50:m.type==='skeleton'?7:m.type==='bat'?5:3;
  gold+=reward;xp+=m.type==='star_king'?100:m.type==='boss'?5:1;
  let droppedWeapon=-1;const bossDropTable={snow:20,shadow:21,volcano:22,ember:22,celestial:23,ruins:23,starfall:24,dungeon:24};const dropChance=m.type==='star_king'?.35:m.type==='boss'?.18:0;const candidate=m.type==='star_king'?24:bossDropTable[region];if(candidate!==undefined&&!ownedWeapons.includes(candidate)&&Math.random()<dropChance){droppedWeapon=candidate;ownedWeapons.push(candidate);const item=weapons[candidate],current=weapons[gear.weapon]||weapons[0];if((item.jobs||[]).includes(heroClass)&&item.atk>current.atk)gear.weapon=candidate;for(let k=0;k<28;k++){const a=Math.PI*2*k/28;particles.push({x:m.x,y:m.y-8,col:WEAPON_EFFECTS[candidate].color,life:26,vx:Math.cos(a)*2.6,vy:Math.sin(a)*2.6,size:4,glow:14})}say('🎁 '+item.grade+' 드랍! '+item.name+' 획득!'+(gear.weapon===candidate?' 자동 장착했어!':' 인벤토리에서 장착할 수 있어!'))}
- if(m.type==='star_king'){bossDead=true;starCore+=1;gold+=4000;potions+=20;starStoryStage=5;say('🌟 아스트라곤 격파! 별의 마지막 노래 완성! 별핵 +1 · 골드 4,000 · 포션 20개!'+(droppedWeapon>=0?' · 종결 무기 획득!':''))}
+ if(m.type==='star_king'){bossDead=true;starCore+=1;gold+=4000;potions+=20;starStoryStage=5;say('🌟 아스트라곤 격파! 별의 마지막 노래 완성! 별핵 +1 · 골드 4,000 · 포션 20개!'+(droppedWeapon>=0?' · 🎁 '+weapons[droppedWeapon].name+' 획득!':''))}
  else if(m.type==='boss'){bossDead=true;gold+=50;potions+=2;const dimensionLoot={volcano:80,ruins:100,starfall:130,ember:150,celestial:180,shadow:220};if(dimensionLoot[region]){gold+=dimensionLoot[region];potions+=1}
   if(region==='ember'&&starStoryStage===1){starStoryStage=2;mainQuestKills=0;xp+=120;say('🔥 용기의 인장 획득! 경험치 +120 · 별의 차원 문이 깨어났다!')}
   else if(region==='celestial'&&starStoryStage===2){starStoryStage=3;mainQuestKills=0;xp+=160;say('🌌 기억의 인장 획득! 경험치 +160 · 그림자 차원 문이 깨어났다!')}
   else if(region==='shadow'&&starStoryStage===3){starStoryStage=4;mainQuestKills=0;xp+=200;say('🌑 믿음의 인장 획득! 경험치 +200 · 태초의 별바다 문이 열렸다!')}
-  else say('보스 격파! 보상 골드와 포션을 획득!')
+  else say('보스 격파! 보상 골드와 포션을 획득!'+(droppedWeapon>=0?' · 🎁 '+weapons[droppedWeapon].name+' 획득!':''))
  }else say('몬스터 처치! +'+reward+' 골드');
  if(questKills<3){questKills++;if(questKills===3){gold+=20;say('의뢰 완료! 보상 골드 20!')}}
  while(xp>=level*5){xp-=level*5;level++;player.max+=2;player.hp=player.max;say('레벨 업! 레벨 '+level+' · HP 완전 회복!')}
