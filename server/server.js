@@ -14,7 +14,7 @@ const send = (ws,msg) => { if(ws.readyState===WebSocket.OPEN) ws.send(JSON.strin
 const broadcast = (room,msg,except=null) => { for(const p of room.players.values()) if(p.ws!==except) send(p.ws,msg); };
 const publicList = () => [...rooms.values()].filter(r=>r.public && r.players.size>0).map(r=>({name:r.name,players:r.players.size,max:r.max,code:r.code}));
 const safeEqual = (a,b) => { const x=Buffer.from(String(a)),y=Buffer.from(String(b)); return x.length===y.length && crypto.timingSafeEqual(x,y); };
-const ITEM_KEYS = new Set(['gold','potions','seeds','starCore','classChangeTickets','stone','copper','iron','crystal','floor','wall','door','flower','fence','bench','lampPost','pond']);
+const ITEM_KEYS = new Set(['gold','potions','reviveStones','seeds','starCore','classChangeTickets','stone','copper','iron','crystal','floor','wall','door','flower','fence','bench','lampPost','pond']);
 function leave(ws) {
   const room=ws.room; if(!room)return;
   const p=room.players.get(ws.playerId); room.players.delete(ws.playerId);
