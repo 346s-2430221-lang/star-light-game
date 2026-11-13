@@ -137,7 +137,7 @@ wss.on('connection',ws=>{
         const item=updated || suggestions.find(x=>x.id===id);
         if(!item) return send(ws,{t:'rpg-admin-result',msg:'건의를 찾지 못했어.'});
         item.reply=reply;
-        if(item.ws&&item.ws.readyState===WebSocket.OPEN)send(item.ws,{t:'rpg-suggestion-reply',item:{id:item.id,reply}});
+        for(const client of wss.clients)send(client,{t:'rpg-suggestion-reply',ownerId:item.ownerId,item:{id:item.id,reply}});
         send(ws,{t:'rpg-admin-result',msg:databaseReady?'건의 #'+id+'에 답장했고 저장했어.':'건의 #'+id+'에 답장했어. (서버 재시작 시 초기화될 수 있어)'});
         listSuggestions().then(items=>send(ws,{t:'rpg-suggestion-list',items})).catch(()=>{});
       }).catch(error=>{console.error('[suggestion-reply]',error.message);send(ws,{t:'rpg-admin-result',msg:'답장 저장에 실패했어. 데이터베이스 설정을 확인해 줘.'})});
