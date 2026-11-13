@@ -133,8 +133,9 @@ select,input,textarea{border-radius:9px!important;border-color:#708ab9!important
     if(finished||!document.getElementById('gameBootFallback'))return;
     var strong=panel.querySelector('strong');
     if(window.__STARLIGHT_GAME_SCRIPT_ENTERED){
-      if(strong)strong.textContent='게임 코드는 실행됐지만 시작에 실패했어';
-      if(detail)detail.textContent='브라우저가 아니라 게임 초기화 중 문제일 수 있어. 화면을 캡처해 보내줘.';
+      if(strong)strong.textContent='게임 시작 과정에서 멈췄어';
+      var phase=String(window.__STARLIGHT_GAME_PHASE||'게임 코드 시작 위치').slice(0,80);
+      if(detail)detail.textContent='마지막 확인 단계: '+phase+' · 이 문구가 보이게 화면을 캡처해 보내줘.';
     }else{
       if(strong)strong.textContent='게임 자바스크립트가 실행되지 않았어';
       if(detail)detail.textContent='이 브라우저에서 스크립트 실행이 차단됐거나 페이지가 오래된 상태일 수 있어.';
