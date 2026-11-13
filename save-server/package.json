@@ -1,0 +1,9 @@
+{
+  "name": "starlight-device-save-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dedicated device-bound save API for Starlight Forest RPG",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=20" }
+}
