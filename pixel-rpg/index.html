@@ -656,9 +656,12 @@ function drawHeroStatic(x,y){
    {c:'#f4c5ff',h:'#ffffff',len:23,w:3,shape:7},
    {c:'#ff795f',h:'#ffe0a0',len:30,w:5,shape:2},
    {c:'#ffb7df',h:'#fff0ff',len:26,w:4,shape:8},
-   {c:'#a8f0ff',h:'#ffffff',len:32,w:6,shape:10}
-  ];
-     {c:'#b5f5ff',h:'#ffffff',len:34,w:5,shape:6},{c:'#a98cff',h:'#e6d9ff',len:35,w:6,shape:8},{c:'#ffce65',h:'#fff4c2',len:38,w:7,shape:10},{c:'#f4c5ff',h:'#ffffff',len:36,w:5,shape:7},{c:'#a8f0ff',h:'#ffffff',len:42,w:8,shape:10}
+   {c:'#a8f0ff',h:'#ffffff',len:32,w:6,shape:10},
+   {c:'#b5f5ff',h:'#ffffff',len:34,w:5,shape:6},
+   {c:'#a98cff',h:'#e6d9ff',len:35,w:6,shape:8},
+   {c:'#ffce65',h:'#fff4c2',len:38,w:7,shape:10},
+   {c:'#f4c5ff',h:'#ffffff',len:36,w:5,shape:7},
+   {c:'#a8f0ff',h:'#ffffff',len:42,w:8,shape:10}
   ];
   const st=styles[gear.weapon]||styles[1],t=Date.now()/1000;
   ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowColor=st.c;ctx.shadowBlur=gear.weapon>=2?12:3;
