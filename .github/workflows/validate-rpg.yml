@@ -21,10 +21,10 @@ jobs:
           const fs = require('node:fs');
           const vm = require('node:vm');
           const html = fs.readFileSync('pixel-rpg/index.html', 'utf8');
-          const scripts = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)];
+          const blocks = html.split('<script').slice(1).map(part => part.slice(part.indexOf('>') + 1).split('</script>')[0]);
           let checked = 0;
-          for (const [index, match] of scripts.entries()) {
-            const source = match[1].trim();
+          for (const [index, sourceText] of blocks.entries()) {
+            const source = sourceText.trim();
             if (!source) continue;
             new vm.Script(source, { filename: 'pixel-rpg-inline-' + index + '.js' });
             checked++;
