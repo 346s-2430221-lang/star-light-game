@@ -3,6 +3,7 @@ services:
     name: starlight-rpg-server
     runtime: node
     plan: free
+    rootDir: server
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /
