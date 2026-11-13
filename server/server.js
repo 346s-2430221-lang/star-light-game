@@ -101,11 +101,18 @@ wss.on('connection',ws=>{
       send(ws,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...v})=>v)});
       return;
     }
+    if(m.t==='rpg-suggestion-my') {
+      const ownerId=String(m.ownerId||'').slice(0,80);
+      if(!ownerId) return;
+      send(ws,{t:'rpg-suggestion-my',items:suggestions.filter(x=>x.ownerId===ownerId).map(({ws:origin,...item})=>item)});
+      return;
+    }
     if(m.t==='rpg-suggestion') {
       const name=String(m.name||'모험가').trim().slice(0,12)||'모험가';
       const text=String(m.text||'').trim().slice(0,500);
+      const ownerId=String(m.ownerId||'').slice(0,80);
       if(text.length<3) return send(ws,{t:'rpg-admin-result',msg:'건의는 3글자 이상 입력해 줘.'});
-      const item={id:nextSuggestionId++,name,text,reply:'',createdAt:Date.now(),ws};
+      const item={id:nextSuggestionId++,name,text,reply:'',createdAt:Date.now(),ownerId,ws};
       suggestions.push(item);
       while(suggestions.length>100)suggestions.shift();
       for(const client of wss.clients) if(client.isAdmin) send(client,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...v})=>v)});
