@@ -4,6 +4,9 @@ const { WebSocketServer, WebSocket } = require('ws');
 const PORT = Number(process.env.PORT || 10000);
 const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '');
 const rooms = new Map();
+let patchNotes = '별빛 숲 RPG 업데이트 소식을 확인해 줘!';
+const suggestions = [];
+let nextSuggestionId = 1;
 const server = http.createServer((req,res) => {
   res.writeHead(200, {'content-type':'application/json; charset=utf-8','access-control-allow-origin':'*'});
   res.end(JSON.stringify({ok:true,service:'starlight-rpg-server',rooms:rooms.size,uptime:Math.floor(process.uptime()),adminConfigured:!!ADMIN_TOKEN,websocket:true,build:process.env.RENDER_GIT_COMMIT||'unknown'}));
@@ -28,7 +31,7 @@ function join(ws,room,name,msg) {
   const id='p'+crypto.randomBytes(5).toString('hex');
   const player={id,name:String(name||'모험가').slice(0,12),x:320,y:230,region:'town',outfit:{},heroClass:'warrior',secondJob:''};
   player.ws=ws; room.players.set(id,player); ws.room=room; ws.playerId=id;
-  send(ws,{t:'rpg-joined',you:id,code:room.code,players:[...room.players.values()].filter(p=>p.id!==id).map(({ws,...p})=>p),world:room.world});
+  send(ws,{t:'rpg-joined',you:id,code:room.code,players:[...room.players.values()].filter(p=>p.id!==id).map(({ws,...p})=>p),world:room.world,patchNotes});
   broadcast(room,{t:'rpg-player-joined',player:{id:player.id,name:player.name,x:player.x,y:player.y,region:player.region,outfit:player.outfit,heroClass:player.heroClass,secondJob:player.secondJob}},ws);
   broadcast(room,{t:'rpg-server-list',servers:publicList()});
 }
@@ -41,7 +44,7 @@ wss.on('connection',ws=>{
     if(m.t==='rpg-create'||m.t==='rpg-public'||m.t==='rpg-join') console.log('[ws] room request:',m.t,'name:',String(m.name||'').slice(0,12),'code:',String(m.code||''));
     if(m.t==='rpg-admin-auth') {
       ws.isAdmin=!!ADMIN_TOKEN && safeEqual(m.token||'',ADMIN_TOKEN);
-      send(ws,ws.isAdmin?{t:'rpg-admin-auth-ok'}:{t:'rpg-admin-auth-failed',msg:ADMIN_TOKEN?'관리자 비밀키가 올바르지 않아.':'서버에 ADMIN_TOKEN 환경 변수가 설정되지 않았어.'});
+      send(ws,ws.isAdmin?{t:'rpg-admin-auth-ok',patchNotes}:{t:'rpg-admin-auth-failed',msg:ADMIN_TOKEN?'관리자 비밀키가 올바르지 않아.':'서버에 ADMIN_TOKEN 환경 변수가 설정되지 않았어.'});
       return;
     }
     if(m.t==='rpg-server-list') { send(ws,{t:'rpg-server-list',servers:publicList()}); return; }
@@ -71,6 +74,58 @@ wss.on('connection',ws=>{
       if(!ITEM_KEYS.has(item)||!Number.isFinite(amount)||amount<1||amount>100000) return send(ws,{t:'rpg-admin-result',msg:'아이템 또는 수량이 올바르지 않아.'});
       send(ws,{t:'rpg-admin-item',item,amount});
       send(ws,{t:'rpg-admin-result',msg:'솔로 캐릭터에게 '+item+' × '+amount+' 지급 완료!'});
+      return;
+    }
+    if(m.t==='rpg-admin-patchnotes') {
+      if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
+      const text=String(m.text||'').trim().slice(0,2500);
+      if(!text) return send(ws,{t:'rpg-admin-result',msg:'패치노트 내용을 입력해 줘.'});
+      patchNotes=text;
+      for(const client of wss.clients) send(client,{t:'rpg-admin-patchnotes',text});
+      send(ws,{t:'rpg-admin-result',msg:'패치노트를 모든 접속자에게 게시했어.'});
+      return;
+    }
+    if(m.t==='rpg-admin-suggestions-get') {
+      if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
+      send(ws,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...item})=>item)});
+      return;
+    }
+    if(m.t==='rpg-admin-suggestion-reply') {
+      if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
+      const item=suggestions.find(x=>x.id===Number(m.id));
+      const reply=String(m.text||'').trim().slice(0,500);
+      if(!item||!reply) return send(ws,{t:'rpg-admin-result',msg:'건의 또는 답변을 확인해 줘.'});
+      item.reply=reply;
+      if(item.ws&&item.ws.readyState===WebSocket.OPEN) send(item.ws,{t:'rpg-suggestion-reply',item:{id:item.id,reply}});
+      send(ws,{t:'rpg-admin-result',msg:'건의 #'+item.id+'에 답장했어.'});
+      send(ws,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...v})=>v)});
+      return;
+    }
+    if(m.t==='rpg-suggestion') {
+      const name=String(m.name||'모험가').trim().slice(0,12)||'모험가';
+      const text=String(m.text||'').trim().slice(0,500);
+      if(text.length<3) return send(ws,{t:'rpg-admin-result',msg:'건의는 3글자 이상 입력해 줘.'});
+      const item={id:nextSuggestionId++,name,text,reply:'',createdAt:Date.now(),ws};
+      suggestions.push(item);
+      while(suggestions.length>100)suggestions.shift();
+      for(const client of wss.clients) if(client.isAdmin) send(client,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...v})=>v)});
+      send(ws,{t:'rpg-admin-result',msg:'건의 #'+item.id+' 접수 완료!'});
+      return;
+    }
+    if(m.t==='rpg-admin-revoke'||m.t==='rpg-admin-revoke-solo') {
+      if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
+      const item=String(m.item||''),amount=Math.floor(Number(m.amount));
+      if(!ITEM_KEYS.has(item)||!Number.isFinite(amount)||amount<1||amount>100000) return send(ws,{t:'rpg-admin-result',msg:'아이템 또는 수량이 올바르지 않아.'});
+      const target=String(m.target||'all');
+      if(!ws.room) {
+        send(ws,{t:'rpg-admin-remove-item',item,amount});
+        send(ws,{t:'rpg-admin-result',msg:'솔로 캐릭터에게서 '+item+' 회수 명령을 보냈어.'});
+        return;
+      }
+      const recipients=target==='all'?[...ws.room.players.values()]:[ws.room.players.get(target)].filter(Boolean);
+      if(!recipients.length)return send(ws,{t:'rpg-admin-result',msg:'회수할 플레이어를 찾지 못했어.'});
+      for(const recipient of recipients)send(recipient.ws,{t:'rpg-admin-remove-item',item,amount});
+      send(ws,{t:'rpg-admin-result',msg:recipients.length+'명에게서 '+item+' × '+amount+' 회수 명령을 보냈어.'});
       return;
     }
     if(!room||!player) return;
