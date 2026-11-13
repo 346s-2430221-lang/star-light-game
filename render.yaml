@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: starlight-rpg-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /
+    autoDeploy: true
