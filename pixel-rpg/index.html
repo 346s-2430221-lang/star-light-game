@@ -127,7 +127,7 @@ select,input,textarea{border-radius:9px!important;border-color:#708ab9!important
     finished=true;
     var strong=panel.querySelector('strong');
     if(strong)strong.textContent='게임 코드에서 오류가 발생했어';
-    if(detail)detail.textContent=String(e.message||'JavaScript 실행 오류').slice(0,180);
+    if(detail){var msg=String(e.message||'');var ko='게임을 실행하는 중 문제가 발생했어.';if(/Cannot read properties of null/i.test(msg))ko='필요한 화면 요소를 찾지 못했어. 게임 화면 구성 코드를 확인해야 해.';else if(/Cannot read properties of undefined/i.test(msg))ko='아직 준비되지 않은 값을 사용하려고 했어. 게임 초기화 코드를 확인해야 해.';else if(/is not a function/i.test(msg))ko='실행할 수 없는 기능을 호출했어. 관련 함수 연결을 확인해야 해.';else if(/is not defined/i.test(msg))ko='게임에 필요한 이름이나 기능을 찾지 못했어. 변수 선언을 확인해야 해.';else if(/Unexpected token|Unexpected end|SyntaxError/i.test(msg))ko='게임 코드의 문법에 문제가 있어. 코드의 괄호와 기호를 확인해야 해.';else if(/localStorage|SecurityError/i.test(msg))ko='브라우저 저장 기능을 사용할 수 없어. 사이트 저장 권한을 확인해야 해.';detail.textContent=ko;}
   });
   window.setTimeout(function(){
     if(finished||!document.getElementById('gameBootFallback'))return;
