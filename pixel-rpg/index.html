@@ -116,6 +116,28 @@ select,input,textarea{border-radius:9px!important;border-color:#708ab9!important
 
 <section class="panel" id="landPanel" hidden><div class="land-head"><div><span class="land-kicker">YOUR LITTLE HOMESTEAD</span><h2>🏡 나만의 땅</h2></div><span class="land-lock">PRIVATE LAND</span></div><p id="landInfo">내 땅에 들어오면 건축 메뉴가 열려!</p><div class="actions land-actions"><button id="buyLandButton">🏡 이 땅 구매 · 50G</button><button id="buildModeButton">🧱 건축 모드 켜기</button><select id="buildBlockSelect"><option value="floor">🪵 나무 바닥</option><option value="wall">🧱 돌 벽</option><option value="door">🚪 문</option><option value="fence">🪵 울타리</option><option value="flower">🌼 꽃</option><option value="bench">🪑 벤치</option><option value="lampPost">🏮 정원등</option><option value="pond">💧 연못</option></select><button id="eraseBuildButton">🧹 철거 도구</button></div><p class="muted" id="landHint">내 땅에서만 건축 메뉴가 표시돼. 친구와 함께 꾸미려면 멀티 서버에 접속해!</p></section><div id="mobile"><div class="dpad"><button class="up" data-key="ArrowUp">▲</button><button class="left" data-key="ArrowLeft">◀</button><button class="down" data-key="ArrowDown">▼</button><button class="right" data-key="ArrowRight">▶</button></div><div style="display:flex;gap:7px"><button class="actbtn" data-key="Space">⚔️<br>공격</button><button class="actbtn" data-key="KeyE">📦<br>줍기</button><button class="actbtn" id="giftButton" type="button" style="background:#8b5b36;border-color:#e9c28a" aria-label="주민에게 선물">🎁<br>선물 G</button><button class="actbtn" id="skillButton" type="button" style="background:#55447d;border-color:#bba4ff" aria-label="직업 스킬">✨<br>스킬 Q</button><button class="actbtn" id="potionButton" type="button" style="background:#28694f;border-color:#83e9ae" aria-label="회복 포션">🧪<br>포션 R</button></div></div><div class="foot">설치 없이 실행되는 브라우저 RPG · 진행 상황은 이 기기의 브라우저에 저장돼.</div></main>
 <script>
+(function(){
+  var panel=document.getElementById('gameBootFallback');
+  if(!panel)return;
+  var detail=panel.querySelector('small');
+  if(detail)detail.textContent='브라우저에서 게임 코드 실행 여부를 확인하고 있어…';
+  var finished=false;
+  window.addEventListener('error',function(e){
+    if(finished)return;
+    finished=true;
+    var strong=panel.querySelector('strong');
+    if(strong)strong.textContent='게임 코드에서 오류가 발생했어';
+    if(detail)detail.textContent=String(e.message||'JavaScript 실행 오류').slice(0,180);
+  });
+  window.setTimeout(function(){
+    if(finished||!document.getElementById('gameBootFallback'))return;
+    var strong=panel.querySelector('strong');
+    if(strong)strong.textContent='게임 코드가 시작되지 않았어';
+    if(detail)detail.textContent='브라우저가 게임 스크립트를 실행하지 못했어. 이 화면을 캡처해 보내줘.';
+  },2500);
+})();
+</script>
+<script>
 (()=>{'use strict';try{const bootFallback=document.getElementById('gameBootFallback');if(bootFallback)bootFallback.remove();
 const c=document.getElementById('game'),ctx=c.getContext('2d'),W=640,H=400,T=32,keys=new Set();ctx.imageSmoothingEnabled=false;
 const RENDER_WS='wss://no-real-no-here.onrender.com';let mpSocket=null,mpYou=null,mpCode='',remotePlayers=new Map(),mpLastSend=0;
