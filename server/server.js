@@ -46,7 +46,7 @@ const suggestions = [];
 let nextSuggestionId = 1;
 const server = http.createServer((req,res) => {
   res.writeHead(200, {'content-type':'application/json; charset=utf-8','access-control-allow-origin':'*'});
-  res.end(JSON.stringify({ok:true,service:'starlight-rpg-server',rooms:rooms.size,uptime:Math.floor(process.uptime()),adminConfigured:!!ADMIN_TOKEN,websocket:true,build:process.env.RENDER_GIT_COMMIT||'unknown'}));
+  res.end(JSON.stringify({ok:true,service:'starlight-rpg-server',rooms:rooms.size,uptime:Math.floor(process.uptime()),adminConfigured:!!ADMIN_TOKEN,databaseConfigured:databaseReady,websocket:true,build:process.env.RENDER_GIT_COMMIT||'unknown'}));
 });
 const wss = new WebSocketServer({server});
 const code = () => { let n; do { n=String(Math.floor(100000+Math.random()*900000)); } while([...rooms.values()].some(r=>r.code===n)); return n; };
