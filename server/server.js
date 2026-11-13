@@ -3,6 +3,43 @@ const crypto = require('crypto');
 const { WebSocketServer, WebSocket } = require('ws');
 const PORT = Number(process.env.PORT || 10000);
 const ADMIN_TOKEN = String(process.env.ADMIN_TOKEN || '');
+const SUPABASE_URL = String(process.env.SUPABASE_URL || '').replace(/\\/$/, '');
+const SUPABASE_SERVICE_ROLE_KEY = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '');
+const databaseReady = !!(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
+async function dbRequest(path, options={}) {
+  if (!databaseReady) return null;
+  const response = await fetch(SUPABASE_URL + '/rest/v1/' + path, { ...options, headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, authorization: 'Bearer ' + SUPABASE_SERVICE_ROLE_KEY, 'content-type': 'application/json', ...(options.headers || {}) } });
+  const body = await response.text();
+  if (!response.ok) throw new Error('Supabase HTTP ' + response.status + ': ' + body.slice(0,200));
+  return body ? JSON.parse(body) : null;
+}
+async function loadStoredPatchNotes() {
+  if (!databaseReady) return;
+  const rows = await dbRequest('game_settings?select=value&key=eq.patch_notes&limit=1');
+  if (rows && rows[0] && rows[0].value && typeof rows[0].value.text === 'string') patchNotes = rows[0].value.text.slice(0,2500);
+}
+async function storePatchNotes(text) {
+  if (!databaseReady) return false;
+  await dbRequest('game_settings?on_conflict=key', { method:'POST', headers:{ Prefer:'resolution=merge-duplicates,return=minimal' }, body:JSON.stringify({ key:'patch_notes', value:{text}, updated_at:new Date().toISOString() }) });
+  return true;
+}
+function mapSuggestion(row) { return { id:Number(row.id), name:row.player_name, text:row.content, reply:row.reply || '', createdAt:row.created_at, ownerId:row.owner_id }; }
+async function listSuggestions(ownerId=null) {
+  if (!databaseReady) return suggestions.filter(x=>!ownerId || x.ownerId===ownerId).map(({ws:origin,...item})=>item);
+  const filter = ownerId ? '&owner_id=eq.'+encodeURIComponent(ownerId) : '';
+  const rows = await dbRequest('player_suggestions?select=id,owner_id,player_name,content,reply,created_at&order=created_at.desc&limit=100'+filter);
+  return (rows || []).map(mapSuggestion);
+}
+async function createSuggestionRecord(name, content, ownerId) {
+  if (!databaseReady) return null;
+  const rows = await dbRequest('player_suggestions?select=id,owner_id,player_name,content,reply,created_at', { method:'POST', headers:{ Prefer:'return=representation' }, body:JSON.stringify({ owner_id:ownerId, player_name:name, content, reply:'' }) });
+  return rows && rows[0] ? mapSuggestion(rows[0]) : null;
+}
+async function updateSuggestionReply(id, reply) {
+  if (!databaseReady) return null;
+  const rows = await dbRequest('player_suggestions?id=eq.'+encodeURIComponent(id)+'&select=id,owner_id,player_name,content,reply,created_at', { method:'PATCH', headers:{ Prefer:'return=representation' }, body:JSON.stringify({ reply }) });
+  return rows && rows[0] ? mapSuggestion(rows[0]) : null;
+}
 const rooms = new Map();
 let patchNotes = '별빛 숲 RPG 업데이트 소식을 확인해 줘!';
 const suggestions = [];
@@ -81,30 +118,35 @@ wss.on('connection',ws=>{
       const text=String(m.text||'').trim().slice(0,2500);
       if(!text) return send(ws,{t:'rpg-admin-result',msg:'패치노트 내용을 입력해 줘.'});
       patchNotes=text;
-      for(const client of wss.clients) send(client,{t:'rpg-admin-patchnotes',text});
-      send(ws,{t:'rpg-admin-result',msg:'패치노트를 모든 접속자에게 게시했어.'});
+      storePatchNotes(text).then(saved=>{
+        for(const client of wss.clients) send(client,{t:'rpg-admin-patchnotes',text});
+        send(ws,{t:'rpg-admin-result',msg:saved?'패치노트를 게시하고 영구 저장했어.':'패치노트를 게시했어. (데이터베이스 미설정: 서버 재시작 시 초기화될 수 있어)'});
+      }).catch(error=>{console.error('[patchnotes]',error.message);send(ws,{t:'rpg-admin-result',msg:'패치노트 게시 완료. 데이터베이스 저장은 실패했어.'});for(const client of wss.clients)send(client,{t:'rpg-admin-patchnotes',text})});
       return;
     }
     if(m.t==='rpg-admin-suggestions-get') {
       if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
-      send(ws,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...item})=>item)});
+      listSuggestions().then(items=>send(ws,{t:'rpg-suggestion-list',items})).catch(error=>{console.error('[suggestions]',error.message);send(ws,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...item})=>item)})});
       return;
     }
     if(m.t==='rpg-admin-suggestion-reply') {
       if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
-      const item=suggestions.find(x=>x.id===Number(m.id));
-      const reply=String(m.text||'').trim().slice(0,500);
-      if(!item||!reply) return send(ws,{t:'rpg-admin-result',msg:'건의 또는 답변을 확인해 줘.'});
-      item.reply=reply;
-      if(item.ws&&item.ws.readyState===WebSocket.OPEN) send(item.ws,{t:'rpg-suggestion-reply',item:{id:item.id,reply}});
-      send(ws,{t:'rpg-admin-result',msg:'건의 #'+item.id+'에 답장했어.'});
-      send(ws,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...v})=>v)});
+      const id=Number(m.id), reply=String(m.text||'').trim().slice(0,500);
+      if(!Number.isSafeInteger(id)||id<1||!reply) return send(ws,{t:'rpg-admin-result',msg:'건의 또는 답변을 확인해 줘.'});
+      updateSuggestionReply(id,reply).then(updated=>{
+        const item=updated || suggestions.find(x=>x.id===id);
+        if(!item) return send(ws,{t:'rpg-admin-result',msg:'건의를 찾지 못했어.'});
+        item.reply=reply;
+        if(item.ws&&item.ws.readyState===WebSocket.OPEN)send(item.ws,{t:'rpg-suggestion-reply',item:{id:item.id,reply}});
+        send(ws,{t:'rpg-admin-result',msg:databaseReady?'건의 #'+id+'에 답장했고 저장했어.':'건의 #'+id+'에 답장했어. (서버 재시작 시 초기화될 수 있어)'});
+        listSuggestions().then(items=>send(ws,{t:'rpg-suggestion-list',items})).catch(()=>{});
+      }).catch(error=>{console.error('[suggestion-reply]',error.message);send(ws,{t:'rpg-admin-result',msg:'답장 저장에 실패했어. 데이터베이스 설정을 확인해 줘.'})});
       return;
     }
     if(m.t==='rpg-suggestion-my') {
       const ownerId=String(m.ownerId||'').slice(0,80);
       if(!ownerId) return;
-      send(ws,{t:'rpg-suggestion-my',items:suggestions.filter(x=>x.ownerId===ownerId).map(({ws:origin,...item})=>item)});
+      listSuggestions(ownerId).then(items=>send(ws,{t:'rpg-suggestion-my',items})).catch(error=>{console.error('[suggestion-my]',error.message);send(ws,{t:'rpg-suggestion-my',items:suggestions.filter(x=>x.ownerId===ownerId).map(({ws:origin,...item})=>item)})});
       return;
     }
     if(m.t==='rpg-suggestion') {
@@ -112,14 +154,15 @@ wss.on('connection',ws=>{
       const text=String(m.text||'').trim().slice(0,500);
       const ownerId=String(m.ownerId||'').slice(0,80);
       if(text.length<3) return send(ws,{t:'rpg-admin-result',msg:'건의는 3글자 이상 입력해 줘.'});
-      const item={id:nextSuggestionId++,name,text,reply:'',createdAt:Date.now(),ownerId,ws};
-      suggestions.push(item);
-      while(suggestions.length>100)suggestions.shift();
-      for(const client of wss.clients) if(client.isAdmin) send(client,{t:'rpg-suggestion-list',items:suggestions.map(({ws:origin,...v})=>v)});
-      send(ws,{t:'rpg-admin-result',msg:'건의 #'+item.id+' 접수 완료!'});
+      createSuggestionRecord(name,text,ownerId).then(saved=>{
+        const item=saved || {id:nextSuggestionId++,name,text,reply:'',createdAt:Date.now(),ownerId,ws};
+        item.ws=ws;suggestions.push(item);while(suggestions.length>100)suggestions.shift();
+        listSuggestions().then(items=>{for(const client of wss.clients)if(client.isAdmin)send(client,{t:'rpg-suggestion-list',items})}).catch(()=>{});
+        send(ws,{t:'rpg-admin-result',msg:databaseReady?'건의 #'+item.id+' 접수 완료! 안전하게 저장했어.':'건의 #'+item.id+' 접수 완료! (데이터베이스 미설정: 서버 재시작 시 초기화될 수 있어)'});
+      }).catch(error=>{console.error('[suggestion-create]',error.message);send(ws,{t:'rpg-admin-result',msg:'건의 저장에 실패했어. 잠시 후 다시 시도해 줘.'})});
       return;
     }
-    if(m.t==='rpg-admin-revoke'||m.t==='rpg-admin-revoke-solo') {
+        if(m.t==='rpg-admin-revoke'||m.t==='rpg-admin-revoke-solo') {
       if(!ws.isAdmin) return send(ws,{t:'rpg-admin-result',msg:'관리자 권한이 없어.'});
       const item=String(m.item||''),amount=Math.floor(Number(m.amount));
       if(!ITEM_KEYS.has(item)||!Number.isFinite(amount)||amount<1||amount>100000) return send(ws,{t:'rpg-admin-result',msg:'아이템 또는 수량이 올바르지 않아.'});
@@ -175,4 +218,5 @@ wss.on('connection',ws=>{
   ws.on('close',()=>leave(ws));
   ws.on('error',err=>{ console.error('[ws] client error:',err&&err.message||err); leave(ws); });
 });
+loadStoredPatchNotes().catch(error=>console.error('[patchnotes-load]',error.message));
 server.listen(PORT,'0.0.0.0',()=>console.log('Starlight RPG server listening on '+PORT));
